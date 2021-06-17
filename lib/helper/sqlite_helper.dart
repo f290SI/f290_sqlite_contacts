@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -47,6 +49,7 @@ class Contato {
 
 class SQLiteOpenHelper {
   SQLiteOpenHelper.internal();
+
   static final SQLiteOpenHelper _instance = SQLiteOpenHelper.internal();
   factory SQLiteOpenHelper() => _instance;
 
@@ -84,5 +87,54 @@ class SQLiteOpenHelper {
     Database db = await dataBase;
     contato.id = await db.insert(tabela, contato.toMap());
     return contato;
+  }
+
+  Future<Contato> findById(int id) async {
+    Database db = await dataBase;
+
+    List<Map<String, dynamic>> mapaRetorno = await db.query(tabela,
+        distinct: true,
+        columns: [
+          colunaId,
+          colunaNome,
+          colunaEmail,
+          colunaTelefone,
+          colunaPathImagem
+        ],
+        where: '$colunaId = ?',
+        whereArgs: [id]);
+
+    return mapaRetorno.length > 0 ? Contato.fromMap(mapaRetorno.first) : Map();
+  }
+
+  Future<int> delete(int id) async {
+    Database db = await dataBase;
+    return await db.delete(tabela, where: '$colunaId = ?', whereArgs: [id]);
+  }
+
+  Future<int> update(Contato contato) async {
+    Database db = await dataBase;
+    return await db.update(tabela, contato.toMap(),
+        where: '$colunaId = ?', whereArgs: [contato.id]);
+  }
+
+  Future<List<Contato>> findAll() async {
+    Database db = await dataBase;
+
+    List<Map<String, dynamic>> listReturn =
+        await db.rawQuery('SELECT * FROM $tabela');
+
+    List<Contato> contatos = [];
+
+    listReturn.forEach((element) {
+      contatos.add(Contato.fromMap(element));
+    });
+
+    return contatos;
+  }
+
+  Future<int> getCount() async {
+    Database db = await dataBase;
+    Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM $tabela'));
   }
 }
